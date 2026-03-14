@@ -1,6 +1,6 @@
 
 
-
+This is Live agent that helps you for translation and your homework as well.
 
 This contains everything you need to run your app locally.
 
