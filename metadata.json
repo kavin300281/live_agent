@@ -1,0 +1,8 @@
+{
+  "name": "Gemini Live Vision Agent",
+  "description": "A real-time AI companion you can talk to and show things to. Features low-latency audio interaction and vision capabilities powered by Gemini Live API.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

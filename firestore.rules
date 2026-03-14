@@ -1,0 +1,111 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: userId (UID)
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required, email format)
+    //   - displayName: string (optional)
+    //   - photoURL: string (optional)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: sessions
+    // Document ID: sessionId
+    // Fields:
+    //   - uid: string (required, owner)
+    //   - title: string (optional)
+    //   - createdAt: timestamp (required)
+    //   - updatedAt: timestamp (required)
+    //
+    // Collection: sessions/{sessionId}/messages
+    // Document ID: messageId
+    // Fields:
+    //   - sessionId: string (required)
+    //   - role: string (required, enum: ['user', 'model'])
+    //   - text: string (required)
+    //   - timestamp: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+
+    function isRequestOwner() {
+      return isAuthenticated() && request.auth.uid == request.resource.data.uid;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email) &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidSession(data) {
+      return data.keys().hasAll(['uid', 'createdAt', 'updatedAt']) &&
+             data.uid == request.auth.uid &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+
+    function isValidMessage(data, sessionId) {
+      return data.keys().hasAll(['sessionId', 'role', 'text', 'timestamp']) &&
+             data.sessionId == sessionId &&
+             data.role in ['user', 'model'] &&
+             data.text is string && data.text.size() < 10000 &&
+             data.timestamp is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && 
+                      request.resource.data.uid == resource.data.uid;
+    }
+
+    match /sessions/{sessionId} {
+      allow read: if isDocOwner();
+      allow create: if isRequestOwner() && isValidSession(request.resource.data);
+      allow update: if isDocOwner() && isValidSession(request.resource.data) &&
+                      request.resource.data.uid == resource.data.uid;
+      allow delete: if isDocOwner();
+
+      match /messages/{messageId} {
+        allow read: if isAuthenticated() && get(/databases/$(database)/documents/sessions/$(sessionId)).data.uid == request.auth.uid;
+        allow create: if isAuthenticated() && 
+                        get(/databases/$(database)/documents/sessions/$(sessionId)).data.uid == request.auth.uid &&
+                        isValidMessage(request.resource.data, sessionId);
+      }
+    }
+    
+    match /test/connection {
+      allow read: if true;
+    }
+  }
+}

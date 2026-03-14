@@ -1,0 +1,55 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique identifier for the user" },
+        "email": { "type": "string", "format": "email", "description": "User's email address" },
+        "displayName": { "type": "string", "description": "User's display name" },
+        "photoURL": { "type": "string", "description": "URL to user's profile picture" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the user account was created" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Session": {
+      "title": "Session",
+      "description": "A Gemini Live conversation session",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Owner of the session" },
+        "title": { "type": "string", "description": "Auto-generated or user-defined title" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the session started" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "When the session was last updated" }
+      },
+      "required": ["uid", "createdAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "An individual message within a session",
+      "type": "object",
+      "properties": {
+        "sessionId": { "type": "string", "description": "ID of the parent session" },
+        "role": { "type": "string", "enum": ["user", "model"], "description": "Who sent the message" },
+        "text": { "type": "string", "description": "The content of the message" },
+        "timestamp": { "type": "string", "format": "date-time", "description": "When the message was sent" }
+      },
+      "required": ["sessionId", "role", "text", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/sessions/{sessionId}": {
+      "schema": "Session",
+      "description": "Conversation sessions"
+    },
+    "/sessions/{sessionId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Messages within a session"
+    }
+  }
+}
